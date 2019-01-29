@@ -2,6 +2,7 @@ from ib_insync import *
 import pandas as pd
 import datetime
 import numpy as np
+import os
 
 ib = IB()
 ib.connect('127.0.0.1', 4001, clientId=2)
@@ -32,7 +33,7 @@ print(strikes)
 
 
 
-def getChain(ulType, ulTicker, expDate, expFuture, strikes):
+def getChain(ulType, ulTicker, expDate, expFuture, strikes, timePull):
     ##Get ul Contract and Contract ID (ID only needed if we're pulling option chain)
     if ulType == 'Future':
         ulContract = Future(ulTicker, expFuture, 'GLOBEX')
@@ -56,7 +57,7 @@ def getChain(ulType, ulTicker, expDate, expFuture, strikes):
     strikeprice = []
 
     ##Get the underlying
-    ulTick = ib.reqHistoricalTicks(ulContract, '', datetime.datetime.now(), 1, 'Bid_Ask',False)
+    ulTick = ib.reqHistoricalTicks(ulContract, '', timePull, 1, 'Bid_Ask',False)
     lastUl = ulTick[-1]
     global time1
     time1 = str(lastUl.time)
@@ -76,7 +77,7 @@ def getChain(ulType, ulTicker, expDate, expFuture, strikes):
         for x in strikes:
             try: 
                 contract = FuturesOption(ulTicker , expDate, x, 'P', 'GLOBEX')
-                tick = ib.reqHistoricalTicks(contract, '', datetime.datetime.now(), 1, 'Bid_Ask', False)  
+                tick = ib.reqHistoricalTicks(contract, '', timePull, 1, 'Bid_Ask', False)  
                 lastTick = tick[-1]
                 time1 = str(lastTick.time)
                 time.append(time1)
@@ -86,7 +87,7 @@ def getChain(ulType, ulTicker, expDate, expFuture, strikes):
                 sizePutAsk.append(lastTick.sizeAsk)
                 strikeprice.append(x)
                 contract = FuturesOption(ulTicker , expDate, x, 'C', 'GLOBEX')
-                tick = ib.reqHistoricalTicks(contract, '', datetime.datetime.now(), 1, 'Bid_Ask', False)  
+                tick = ib.reqHistoricalTicks(contract, '', timePull, 1, 'Bid_Ask', False)  
                 lastTick = tick[-1]
                 priceCallBid.append(lastTick.priceBid)
                 sizeCallBid.append(lastTick.sizeBid)
@@ -103,7 +104,7 @@ def getChain(ulType, ulTicker, expDate, expFuture, strikes):
         for x in strikes:
             try: 
                 contract = Option(ulTicker , expDate, x, 'P', 'SMART')
-                tick = ib.reqHistoricalTicks(contract, '', datetime.datetime.now(), 1, 'Bid_Ask', False)  
+                tick = ib.reqHistoricalTicks(contract, '', timePull, 1, 'Bid_Ask', False)  
                 lastTick = tick[-1]
                 time1 = str(lastTick.time)
                 time.append(time1)
@@ -113,7 +114,7 @@ def getChain(ulType, ulTicker, expDate, expFuture, strikes):
                 sizePutAsk.append(lastTick.sizeAsk)
                 strikeprice.append(x)
                 contract = Option(ulTicker , expDate, x, 'C', 'SMART')
-                tick = ib.reqHistoricalTicks(contract, '', datetime.datetime.now(), 1, 'Bid_Ask', False)  
+                tick = ib.reqHistoricalTicks(contract, '', timePull, 1, 'Bid_Ask', False)  
                 lastTick = tick[-1]
                 priceCallBid.append(lastTick.priceBid)
                 sizeCallBid.append(lastTick.sizeBid)
@@ -137,11 +138,12 @@ def getChain(ulType, ulTicker, expDate, expFuture, strikes):
      'Put Ask size': sizePutAsk,
      'Time': time})
 
-    time1 = str(datetime.datetime.now())
-    time1 = time1[:10]
-    totalDF.to_csv(ulTicker + '_' + expDate + '_' + time1 + '_ticks.csv')
+    if os.path.isfile(ulTicker + '_' + expDate + '.csv') == True:
+        totalDF.to_csv(ulTicker + '_' + expDate + '.csv', mode='a', header=False)
+    else:
+        totalDF.to_csv(ulTicker + '_' + expDate + '.csv')
     global fileName
-    fileName = str(ulTicker + '_' + expDate + '_' + time1 + '_ticks.csv')
+    fileName = str(ulTicker + '_' + expDate + '.csv')
 ##Run program
 
 
