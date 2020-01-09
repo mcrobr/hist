@@ -2,16 +2,108 @@ import pandas as pd
 import datetime
 import numpy as np
 import os
-##NEED TO CORRECT FOR DIVIDENDS - can use historical tick with adjusted price or bring in actuals
-
+profit = 0
 df = pd.read_csv('trialMinuteData.csv', header=0)
-
+entryBuffer = .001
+slBuffer = .0005
+halfBuffer = .002
+##df = df[df['ticker'] == 'SPY']
 df['date'] = pd.to_datetime(df['date'], dayfirst=True)
+uniqueDate = list(df.date.dt.date.unique())
+for i in range(len(uniqueDate)):
+    df2 = df[df['date'].dt.date == uniqueDate[i]]
+    df2 = df2.reset_index()
+    print(df2.head())
 
-print(df['date'][0].year)
 
-for i in df.index:
-        if df['low'][i] > df['close'][0]*.999 and (df['date'][i].hour < 14 and df['date'][i].minute > 45):
-            print("Open")
-        elif df['low'][i] > df['close'][0]*.999:
-            print("Stopped at ",df['close'][0]*.999," at ",df['date'][i])
+    longEntry = df2['close'][0] * (1+entryBuffer)
+    print(longEntry)
+    shortEntry = df2['close'][0] * (1-entryBuffer)
+    print(shortEntry)
+
+    stop = False
+
+    for x in df2.index:
+        if df2['low'][x] <= shortEntry:
+            print('Short Entered')
+            shorted = True
+            shortTime = df2['date'][x]
+            break
+            
+        elif df2['high'][x] >= longEntry:
+            print('Long Entered at ', longEntry, ' at ', df2['date'][x])
+            longed = True
+            longTime = df2['date'][x]
+            position = 1
+            break
+        
+        else:
+            shorted = False
+            longed = False
+            print('next')
+
+    ##Prices to exit longs and shorts
+    longStopLoss = longEntry * (1-slBuffer)
+    longExitHalf = longEntry * (1+halfBuffer)
+    shortStopLoss = shortEntry * (1+slBuffer)
+    shortExitHalf = shortEntry * (1-halfBuffer)
+
+
+    if longed == True:
+        shares = 1
+        longExitHalfBool = False
+        timesUpBool = False
+        longStopLossBool = False
+        for x in df2[df2['date'] > longTime].index:
+            if (df2['date'][x].hour == 14) and (df2['date'][x].minute > 55):
+                print("Time's up at ", df2['close'][x], ' at ',df2['date'][x])
+                timesUpBool = True
+                priceTimesUp = df2['close'][x]
+                break
+            elif df2['low'][x] < longStopLoss:
+                print('Long stopped out at ',longStopLoss, ' at ',df2['date'][x])
+                longStopLossBool = True
+                break
+            elif (df2['high'][x] > longExitHalf and longExitHalfBool == False):
+                print('Half of long exited at ',longExitHalf, ' at ',df2['date'][x])
+                longExitHalfBool = True
+                shares = 0.5
+            else:
+                print('next', df2['date'][x], df2['low'][x+1], df2['date'][x].hour,df2['date'][x].minute )
+        print("Bought 1 at ",longEntry)
+        print("Exited:")
+        if longExitHalfBool == True:
+            print("Half of position at: ", longExitHalf)
+            if timesUpBool == True:
+                print("Half of position at: ",priceTimesUp)
+                profit = profit + longExitHalf / 2 + priceTimesUp /2 - longEntry
+                print('total profit',profit)
+                print("P&L = :",longExitHalf / 2 + priceTimesUp /2 - longEntry, "(or ",(longExitHalf / 2 + priceTimesUp /2 - longEntry)/longEntry*100,"%)")
+                
+            elif longStopLossBool == True:
+                print("Half of position at: ",longStopLoss)
+                profit = profit + longExitHalf / 2 + longStopLoss /2 - longEntry
+                print('total profit',profit)
+                print("P&L = :",longExitHalf / 2 + longStopLoss /2 - longEntry, "(or ",(longExitHalf / 2 + longStopLoss /2 - longEntry)/longEntry*100,"%)")
+        elif longStopLossBool == True:
+            print("Stopped out of full position at: ",longStopLoss)
+            profit = profit + longStopLoss - longEntry
+            print('total profit',profit)
+        elif timesUpBool == True:
+            print("Closed out at the close of day at: ",priceTimesUp)
+            profit = profit + priceTimesUp - longEntry
+            print('total profit',profit)
+               
+    elif shorted == True:
+        longExitHalfBool = False
+        timesUpBool = False
+        longStopLossBool = False
+        for x in df2[df2['date'] > shortTime].index:
+            if df2['high'][x] > shortStopLoss:
+                print('Short stopped out at ',longStopLoss, ' at ',df['date'][x])
+                longStopLossBool = True
+                break            
+
+print('total profit',profit)
+    
+    
