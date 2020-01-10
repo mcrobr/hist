@@ -10,17 +10,15 @@ halfBuffer = .002
 entryArr = np.arange(0, .01, 0.001)
 slArr = np.arange(.0005, .005, .0005)
 halfArr = np.arange(.0005, .005, .0005)
-j = 0
-while j < 10:
-    
-    j = j+1
-    entryBuffer = entryArr[j]
-    slBuffer = slArr[j]
-    halfBuffer = halfArr[j]
+
+
+
               
            
 ##df = df[df['ticker'] == 'SPY']
 ##df['date'] = pd.to_datetime(df['date'], dayfirst=True)
+def runUD(entryBuffer,slBuffer,halfBuffer):
+    profit = 0
     uniqueDate = list(df.date.dt.date.unique())
     for i in range(len(uniqueDate)):
         df2 = df[df['date'].dt.date == uniqueDate[i]]
@@ -34,7 +32,8 @@ while j < 10:
         print(shortEntry)
 
         stop = False
-
+        longed = False
+        shorted = False
         for x in df2.index:
             if df2['low'][x] <= shortEntry:
                 print('Short Entered')
@@ -105,16 +104,7 @@ while j < 10:
                 print("Closed out at the close of day at: ",priceTimesUp)
                 profit = profit + priceTimesUp - longEntry
                 print('total profit',profit)
-                   
-        elif shorted == True:
-            longExitHalfBool = False
-            timesUpBool = False
-            longStopLossBool = False
-            for x in df2[df2['date'] > shortTime].index:
-                if df2['high'][x] > shortStopLoss:
-                    print('Short stopped out at ',longStopLoss, ' at ',df['date'][x])
-                    longStopLossBool = True
-                    break            
+                         
 
     print('total profit',profit)
     result = [profit, entryBuffer, slBuffer, halfBuffer, uniqueDate, df['ticker'][0]]
@@ -124,5 +114,25 @@ while j < 10:
         resultDF.to_csv('dailyResult.csv', mode='a', header=False)
     else:
         resultDF.to_csv('dailyResult.csv')
+
+j = 0
+k = 0
+l = 0
+
+while j < 9:
+    
+    while k < 9:
+        
+        while l < 9:
+            
+            entryBuffer = entryArr[j]
+            slBuffer = slArr[k]
+            halfBuffer = halfArr[l]
+            runUD(entryBuffer,slBuffer,halfBuffer)
+            l = l+1
+        l = 0
+        k = k + 1
+    k = 0
+    j = j+1
         
 
