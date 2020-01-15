@@ -3,7 +3,7 @@ import datetime
 import numpy as np
 import os
 
-df = pd.read_csv('trialMinuteData.csv', parse_dates=['date'],header=0)
+df = pd.read_csv('trialMinuteDataMini.csv', parse_dates=['date'],header=0)
 
 ##Filter down to a day
 ##For each minute, run a theoretical trade and get the result
@@ -18,49 +18,62 @@ def longBet(dfIn):
     size = 1
     stopLoss = 1-0.001
     halfSize = 1+0.002
-    dfIn['close'][i] = inPrice
-    dfIn['close'][i+1:end] = closeList
-    dfIn['high'][i+1:end] = highList
-    dfIn['low'][i+1:end] = lowList
-    dfIn['date'][i+1:end] = dateList
+    inPrice = dfIn['close'].iloc[0]
+##    dfIn['close'][i+1:end] = closeList
+##    dfIn['high'][i+1:end] = highList
+##    dfIn['low'][i+1:end] = lowList
+##    dfIn['date'][i+1:end] = dateList
     
     ##each time step i want to check for time, stoploss, stopwin
-    for each timestep:
+    for x in dfIn.index:
+
         if size == 0:
+
             break
-        elif last timestep:
+        elif dfIn['date'][x] == dfIn['date'].iloc[-1]:
+
             if size == 1:
-                outPrice1 = dfIn[x]['close']
-                outPrice2 = dfIn[x]['close']
+                outPrice1 = dfIn['close'][x]
+                outPrice2 = dfIn['close'][x]
             elif size == 0.5:
-                outPrice2 = dfIn[x]['close']
+                outPrice2 = dfIn['close'][x]
             break
-        elif dfIn[x]['low'] <= inPrice * stopLoss:
+        elif dfIn['low'][x] <= inPrice * stopLoss:
+
             if size == 1:
                 outPrice1 = inPrice * stopLoss
                 outPrice2 = inPrice * stopLoss
+                break
             elif size == 0.5:
                 outPrice2 = inPrice * stopLoss
-        elif size = 1:
-            if dfIn[x]['high'] >= inPrice * halfSize:
+                break
+        elif size == 1:
+
+            if dfIn['high'][x] >= inPrice * halfSize:
+
                 outPrice1 = inPrice * halfSize
                 stopLoss = 1+0.0005
-            else:
-        elif size = 0.5:
-            if dfIn[x]['low'] >= inPrice * stopLoss:
+        elif size == 0.5:
+
+            if dfIn['low'][x] >= inPrice * stopLoss:
                 outPrice2 = inPrice * stopLoss
                 break
-            else:
-    longResult = outPrice1 + outPrice2 - inPrice
+    longResult = outPrice1/2 + outPrice2/2 - inPrice
     return longResult
 
-
+##Cut the dataframe into day slices
 for i in range(len(uniqueDate)):
     df2 = df[df['date'].dt.date == uniqueDate[i]]
     df2 = df2.reset_index()
-    df2['longResult'][i] = longBet(df2)
-    print(df2['date'][i], df2['longResult'][i])
-    df2 = df.iloc[[0, -1]]  ##this makes a new dataframe with the first and last elements
+    df2['longResult'] = np.nan
+    ##In df2 we need to run longBet and shortBet for each step and record results
+    for ind in df2.index:
+        ##Make df3 that is a slice of df2 starting at each timestep
+        df3 = df2.iloc[ind:-1, :]
+        
+        df2['longResult'][ind] = longBet(df3)
+        print(df2['date'][ind], df2['longResult'][ind])
+
         
             
 
