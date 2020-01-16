@@ -4,6 +4,7 @@ import numpy as np
 import os
 
 df = pd.read_csv('trialMinuteDataMini.csv', parse_dates=['date'],header=0)
+df['longResult'] = np.nan
 
 ##Filter down to a day
 ##For each minute, run a theoretical trade and get the result
@@ -11,6 +12,7 @@ df = pd.read_csv('trialMinuteDataMini.csv', parse_dates=['date'],header=0)
 
 ##Filter down to a day
 uniqueDate = list(df.date.dt.date.unique())
+uniqueTicker = list(df.ticker.unique())
 
     ##For each minute, run a theoretical trade and get the result
 
@@ -62,17 +64,36 @@ def longBet(dfIn):
     return longResult
 
 ##Cut the dataframe into day slices
-for i in range(len(uniqueDate)):
-    df2 = df[df['date'].dt.date == uniqueDate[i]]
-    df2 = df2.reset_index()
-    df2['longResult'] = np.nan
-    ##In df2 we need to run longBet and shortBet for each step and record results
-    for ind in df2.index:
-        ##Make df3 that is a slice of df2 starting at each timestep
-        df3 = df2.iloc[ind:-1, :]
+dfResults = pd.DataFrame(data = None)
+for k in range(len(uniqueTicker)):
+    
+    for i in range(len(uniqueDate)):
+        df2 = df[df['date'].dt.date == uniqueDate[i]]
+        df2 = df2.reset_index()
         
-        df2['longResult'][ind] = longBet(df3)
-        print(df2['date'][ind], df2['longResult'][ind])
+        ##In df2 we need to run longBet and shortBet for each step and record results
+        for ind in df2.index:
+            ##Make df3 that is a slice of df2 starting at each timestep
+            df3 = df2.iloc[ind:-1, :]
+            
+            df2['longResult'][ind] = longBet(df3)
+            print(df2['date'][ind], df2['longResult'][ind])
+            if ind == df2.index[-2]:
+                break
+        df2Date = df['date'].dt.date
+        dfTicker = df2['ticker'][0]
+        dfDate = df2['date'][0].year
+        dfDate1 = df2['date'][0].month
+        dfDate2 = df2['date'][0].day
+        print(df2)
+        print(dfResults)
+        dfResults = dfResults.append(df2, ignore_index=True)
+        print(dfResults)
+
+    
+dfResults.to_csv('results.csv')
+##dfResults.to_csv('%s_%d%d%d.csv' %(dfTicker, dfDate,dfDate1,dfDate2))
+
 
         
             
