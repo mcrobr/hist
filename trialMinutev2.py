@@ -3,7 +3,7 @@ import datetime
 import numpy as np
 import os
 
-df = pd.read_csv('trialMinuteDataMini.csv', parse_dates=['date'],header=0)
+df = pd.read_csv('trialMinuteData.csv', parse_dates=['date'],header=0)
 df['longResult'] = np.nan
 
 ##Filter down to a day
@@ -11,7 +11,7 @@ df['longResult'] = np.nan
 ##Output timestamp, ticker, day of week, [one, 5, 15, daily] candle [high, low, volume]     date
 
 ##Filter down to a day
-uniqueDate = list(df.date.dt.date.unique())
+
 uniqueTicker = list(df.ticker.unique())
 
     ##For each minute, run a theoretical trade and get the result
@@ -63,12 +63,14 @@ def longBet(dfIn):
     longResult = outPrice1/2 + outPrice2/2 - inPrice
     return longResult
 
-##Cut the dataframe into day slices
+
 dfResults = pd.DataFrame(data = None)
 for k in range(len(uniqueTicker)):
+    dfSingleTick = df[df['ticker'] == uniqueTicker[k]]
     
+    uniqueDate = list(dfSingleTick.date.dt.date.unique())
     for i in range(len(uniqueDate)):
-        df2 = df[df['date'].dt.date == uniqueDate[i]]
+        df2 = dfSingleTick[dfSingleTick['date'].dt.date == uniqueDate[i]]
         df2 = df2.reset_index()
         
         ##In df2 we need to run longBet and shortBet for each step and record results
@@ -77,7 +79,7 @@ for k in range(len(uniqueTicker)):
             df3 = df2.iloc[ind:-1, :]
             
             df2['longResult'][ind] = longBet(df3)
-            print(df2['date'][ind], df2['longResult'][ind])
+            
             if ind == df2.index[-2]:
                 break
         df2Date = df['date'].dt.date
@@ -85,10 +87,9 @@ for k in range(len(uniqueTicker)):
         dfDate = df2['date'][0].year
         dfDate1 = df2['date'][0].month
         dfDate2 = df2['date'][0].day
-        print(df2)
-        print(dfResults)
         dfResults = dfResults.append(df2, ignore_index=True)
-        print(dfResults)
+        print(dfTicker, "  ", dfDate,"-",dfDate1,"-",dfDate2)
+
 
     
 dfResults.to_csv('results.csv')
