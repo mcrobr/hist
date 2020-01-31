@@ -2,160 +2,44 @@ import pandas as pd
 import datetime
 import numpy as np
 import os
+from sklearn import svm
+##We're taking minute data, and for each minute in each day we're putting in open/high/low/close bar and volume
+##Classifying the next close as above or below the current close and running a sklearn classifier on it.
+##On two days of SPY data it was 5/10 and guessed 9/10 would be above
 
 df = pd.read_csv('trialMinuteDataMini.csv', index_col = ['date'], parse_dates=['date'],header=0)
 df['nextClose'] = np.nan
+df['changeClose'] = np.nan
+df['ccCategory'] = np.nan
 del df['Unnamed: 0']
-print(np.unique(df.index.date))
+
 ##Filter down to a day
 ##For each minute, run a theoretical trade and get the result
 ##Output timestamp, ticker, day of week, [one, 5, 15, daily] candle [high, low, volume]     date
 
 ##Filter down to a day
-uniqueDate = list(df.index.dt.date.unique())
+uniqueDate = list(np.unique(df.index.date))
 uniqueTicker = list(df.ticker.unique())
 
 
 ##Cut the dataframe into day slices
 dfResults = pd.DataFrame(data = None)
 for k in range(len(uniqueTicker)):
-    
+    dfOut = pd.DataFrame()
     for i in range(len(uniqueDate)):
-        df2 = df[df['date'].dt.date == uniqueDate[i]]
+        df2 = df[df.index.date == uniqueDate[i]]
         df2 = df2.reset_index()
         df2.nextClose = df2.close.shift(-1)
+        df2.changeClose = df2.nextClose / df2.close - 1
+        df2.ccCategory = df2.changeClose.map(lambda x: 1 if x < 0 else 0)
+
+        dfOut = dfOut.append(df2)
+        dfOut.drop(dfOut.tail(1).index,inplace=True)
 
 
+dfOut = dfOut.set_index('date')
+clf = svm.SVC(gamma=0.001, C=100)
+clf.fit(dfOut[['open','high','low','close','volume']][:-10],dfOut.ccCategory[:-10])
+print(clf.predict(dfOut[['open','high','low','close','volume']][-10:]))
+print(dfOut.tail(10))
 
-##    
-##dfResults.to_csv('results.csv')
-##dfResults.to_csv('%s_%d%d%d.csv' %(dfTicker, dfDate,dfDate1,dfDate2))
-
-
-        
-            
-
-    
-     
-##           
-####df = df[df['ticker'] == 'SPY']
-####df['date'] = pd.to_datetime(df['date'], dayfirst=True)
-##def runUD(entryBuffer,slBuffer,halfBuffer):
-##    profit = 0
-##    uniqueDate = list(df.date.dt.date.unique())
-##    for i in range(len(uniqueDate)):
-##        df2 = df[df['date'].dt.date == uniqueDate[i]]
-##        df2 = df2.reset_index()
-##        print(df2.head())
-##
-##
-##        longEntry = df2['close'][0] * (1+entryBuffer)
-##        print(longEntry)
-##        shortEntry = df2['close'][0] * (1-entryBuffer)
-##        print(shortEntry)
-##
-##        stop = False
-##        longed = False
-##        shorted = False
-##        for x in df2.index:
-##            if df2['low'][x] <= shortEntry:
-##                print('Short Entered')
-##                shorted = True
-##                shortTime = df2['date'][x]
-##                break
-##                
-##            elif df2['high'][x] >= longEntry:
-##                print('Long Entered at ', longEntry, ' at ', df2['date'][x])
-##                longed = True
-##                longTime = df2['date'][x]
-##                position = 1
-##                break
-##            
-##            else:
-##                shorted = False
-##                longed = False
-##                print('next')
-##
-##        ##Prices to exit longs and shorts
-##        longStopLoss = longEntry * (1-slBuffer)
-##        longExitHalf = longEntry * (1+halfBuffer)
-##        shortStopLoss = shortEntry * (1+slBuffer)
-##        shortExitHalf = shortEntry * (1-halfBuffer)
-##
-##
-##        if longed == True:
-##            shares = 1
-##            longExitHalfBool = False
-##            timesUpBool = False
-##            longStopLossBool = False
-##            for x in df2[df2['date'] > longTime].index:
-##                if (df2['date'][x].hour == 14) and (df2['date'][x].minute > 55):
-##                    print("Time's up at ", df2['close'][x], ' at ',df2['date'][x])
-##                    timesUpBool = True
-##                    priceTimesUp = df2['close'][x]
-##                    break
-##                elif df2['low'][x] < longStopLoss:
-##                    print('Long stopped out at ',longStopLoss, ' at ',df2['date'][x])
-##                    longStopLossBool = True
-##                    break
-##                elif (df2['high'][x] > longExitHalf and longExitHalfBool == False):
-##                    print('Half of long exited at ',longExitHalf, ' at ',df2['date'][x])
-##                    longExitHalfBool = True
-##                    shares = 0.5
-##                else:
-##                    print('next', df2['date'][x], df2['low'][x+1], df2['date'][x].hour,df2['date'][x].minute )
-##            print("Bought 1 at ",longEntry)
-##            print("Exited:")
-##            if longExitHalfBool == True:
-##                print("Half of position at: ", longExitHalf)
-##                if timesUpBool == True:
-##                    print("Half of position at: ",priceTimesUp)
-##                    profit = profit + longExitHalf / 2 + priceTimesUp /2 - longEntry
-##                    print('total profit',profit)
-##                    print("P&L = :",longExitHalf / 2 + priceTimesUp /2 - longEntry, "(or ",(longExitHalf / 2 + priceTimesUp /2 - longEntry)/longEntry*100,"%)")
-##                    
-##                elif longStopLossBool == True:
-##                    print("Half of position at: ",longStopLoss)
-##                    profit = profit + longExitHalf / 2 + longStopLoss /2 - longEntry
-##                    print('total profit',profit)
-##                    print("P&L = :",longExitHalf / 2 + longStopLoss /2 - longEntry, "(or ",(longExitHalf / 2 + longStopLoss /2 - longEntry)/longEntry*100,"%)")
-##            elif longStopLossBool == True:
-##                print("Stopped out of full position at: ",longStopLoss)
-##                profit = profit + longStopLoss - longEntry
-##                print('total profit',profit)
-##            elif timesUpBool == True:
-##                print("Closed out at the close of day at: ",priceTimesUp)
-##                profit = profit + priceTimesUp - longEntry
-##                print('total profit',profit)
-##                         
-##
-##    print('total profit',profit)
-##    result = [profit, entryBuffer, slBuffer, halfBuffer, uniqueDate, df['ticker'][0]]
-##    print(result)
-##    resultDF = pd.DataFrame([result], columns=["profit", 'entry buffer','stop loss buffer','half sell buffer','dates','ticker'])
-##    if os.path.isfile('dailyResult.csv') == True:
-##        resultDF.to_csv('dailyResult.csv', mode='a', header=False)
-##    else:
-##        resultDF.to_csv('dailyResult.csv')
-##
-##j = 0
-##k = 0
-##l = 0
-##
-##while j < 9:
-##    
-##    while k < 9:
-##        
-##        while l < 9:
-##            
-##            entryBuffer = entryArr[j]
-##            slBuffer = slArr[k]
-##            halfBuffer = halfArr[l]
-##            runUD(entryBuffer,slBuffer,halfBuffer)
-##            l = l+1
-##        l = 0
-##        k = k + 1
-##    k = 0
-##    j = j+1
-##        
-##
